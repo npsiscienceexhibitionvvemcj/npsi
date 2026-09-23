@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Greenline Depot — Member Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E7E4DA; --surface:#FBFAF6; --surface-2:#F1EFE7; --ink:#181D19; --ink-soft:#5B6259;
+    --line:#D3CEC0; --line-strong:#B7B09D; --paper:#A9723C; --cans:#6E7A80; --plastic:#3E8C5C; --glass:#2E7A78;
+    --accent:#2E6F4E; --accent-ink:#F2F5F0; --gold:#B6862C; --gold-bg:#F4E9D2; --danger:#A23B2E;
+    --font-display:'Space Grotesk', sans-serif; --font-body:'Inter', sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14170F; --surface:#1C201A; --surface-2:#212620; --ink:#EDECE4; --ink-soft:#9AA294;
+      --line:#333B31; --line-strong:#454E40; --accent-ink:#0E1310; --gold-bg:#2B2311;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body);
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+    -webkit-font-smoothing:antialiased;
+  }
+  button, input{font-family:inherit;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  header.topbar{
+    display:flex; align-items:center; justify-content:space-between; padding:14px 22px;
+    border-bottom:1px solid var(--line-strong); background:var(--surface);
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:20; flex-wrap:wrap; gap:10px;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand .mark{width:30px; height:30px; border-radius:50%; background:var(--accent); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .brand .mark svg{width:16px; height:16px;}
+  .brand h1{font-family:var(--font-display); font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em;}
+  .brand .sub{font-size:12.5px; color:var(--ink-soft);}
+  .who{display:flex; align-items:center; gap:12px; font-size:13px;}
+  .who .greet{color:var(--ink-soft);}
+  .signout{border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink); padding:7px 12px; border-radius:5px; cursor:pointer; font-size:12.5px;}
+
+  .wrap{max-width:760px; margin:0 auto; padding:24px 18px 60px;}
+
+  /* ---- auth screen ---- */
+  .auth-card{
+    max-width:380px; margin:60px auto; background:var(--surface); border:1px solid var(--line-strong);
+    border-radius:10px; padding:28px 26px;
+  }
+  .auth-card h2{font-family:var(--font-display); font-size:20px; margin:0 0 4px;}
+  .auth-card p.sub{color:var(--ink-soft); font-size:13px; margin:0 0 20px;}
+  .auth-tabs{display:flex; gap:6px; margin-bottom:18px; background:var(--surface-2); padding:3px; border-radius:6px;}
+  .auth-tabs button{flex:1; padding:8px; border:none; background:none; border-radius:4px; font-size:13px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+  .auth-tabs button.active{background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,0.08);}
+  .auth-card label{display:block; font-size:12px; color:var(--ink-soft); margin:12px 0 5px;}
+  .auth-card label:first-of-type{margin-top:0;}
+  .auth-card input{width:100%; padding:10px 11px; border:1px solid var(--line-strong); border-radius:5px; background:var(--surface-2); color:var(--ink); font-size:13.5px;}
+  .auth-card input.invalid{border-color:var(--danger);}
+  .auth-error{color:var(--danger); font-size:12px; margin-top:10px; min-height:14px; line-height:1.4;}
+  .auth-submit{width:100%; margin-top:18px; padding:12px; border:none; background:var(--accent); color:var(--accent-ink); font-weight:600; font-size:13.5px; border-radius:6px; cursor:pointer;}
+  .auth-submit:disabled{background:var(--line-strong); cursor:not-allowed;}
+  .config-warning{
+    max-width:420px; margin:60px auto; background:var(--gold-bg); border:1px dashed var(--gold);
+    border-radius:8px; padding:18px 20px; font-size:13px; line-height:1.6;
+  }
+
+  /* ---- tabs ---- */
+  .tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:22px; overflow-x:auto;}
+  .tab-btn{
+    padding:11px 16px; border:none; background:none; font-size:13.5px; font-weight:600; color:var(--ink-soft);
+    cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;
+  }
+  .tab-btn.active{color:var(--ink); border-color:var(--accent);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* ---- dashboard ---- */
+  .balance-cards{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:22px;}
+  .balance-card{border:1px solid var(--line); border-radius:8px; padding:16px; background:var(--surface);}
+  .balance-card .label{font-size:11.5px; color:var(--ink-soft); letter-spacing:0.02em;}
+  .balance-card .value{font-family:var(--font-mono); font-size:28px; font-weight:600; margin-top:5px;}
+  .balance-card.points{background:var(--gold-bg);}
+  .balance-card.cash{background:#E1EFE4;}
+  :root:not([data-theme="light"]) .balance-card.cash{background:#182720;}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .balance-card.cash{background:#182720;} }
+  .balance-card.points .value{color:var(--gold);}
+  .balance-card.cash .value{color:var(--accent);}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:18px 20px; margin-bottom:18px;}
+  .card h3{font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--ink-soft); margin:0 0 14px; letter-spacing:0.02em;}
+  .bd-row{display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12.5px;}
+  .bd-row .bd-label{width:56px; flex-shrink:0; color:var(--ink-soft);}
+  .bd-bar-track{flex:1; height:7px; background:var(--surface-2); border-radius:4px; overflow:hidden;}
+  .bd-bar{height:100%; border-radius:4px;}
+  .bd-row .bd-val{font-family:var(--font-mono); width:56px; text-align:right; flex-shrink:0;}
+
+  .history-item{padding:11px 0; border-bottom:1px solid var(--line); font-size:12.5px;}
+  .history-item:last-child{border-bottom:none;}
+  .history-item .h-top{display:flex; justify-content:space-between; color:var(--ink-soft); font-family:var(--font-mono); font-size:11px; margin-bottom:4px;}
+  .history-item .h-gain{color:var(--accent); font-family:var(--font-mono); font-size:11.5px; margin-top:3px;}
+  .history-item .h-spend{color:var(--danger); font-family:var(--font-mono); font-size:11.5px; margin-top:3px;}
+  .empty-note{color:var(--ink-soft); font-size:12.5px; text-align:center; padding:20px 0;}
+
+  /* ---- leaderboard ---- */
+  .lb-row{
+    display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:12px;
+    padding:12px 14px; border-bottom:1px solid var(--line);
+  }
+  .lb-row:last-child{border-bottom:none;}
+  .lb-row.me{background:var(--gold-bg); border-radius:6px;}
+  .lb-rank{font-family:var(--font-mono); font-weight:600; color:var(--ink-soft); text-align:center;}
+  .lb-rank.first{font-size:18px;}
+  .lb-name{font-weight:600; font-size:13.5px;}
+  .lb-name .you-tag{font-size:10.5px; color:var(--accent); font-weight:600; margin-left:6px;}
+  .lb-pts{font-family:var(--font-mono); font-size:13px; color:var(--gold);}
+  .prize-banner{
+    display:flex; align-items:center; gap:12px; background:var(--gold-bg); border:1px solid var(--gold);
+    border-radius:8px; padding:14px 16px; margin-bottom:18px; font-size:13px;
+  }
+  .prize-banner .emoji{font-size:26px;}
+
+  /* ---- shop ---- */
+  .shop-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px;}
+  .shop-item{border:1px solid var(--line); border-radius:8px; padding:14px; background:var(--surface); text-align:center;}
+  .shop-item .emoji{font-size:32px; margin-bottom:8px;}
+  .shop-item .iname{font-weight:600; font-size:13px; margin-bottom:4px;}
+  .shop-item .icost{font-family:var(--font-mono); color:var(--accent); font-size:13px; margin-bottom:2px;}
+  .shop-item .istock{font-size:11px; color:var(--ink-soft); margin-bottom:10px;}
+  .shop-item button{
+    width:100%; padding:8px; border:none; border-radius:5px; background:var(--accent); color:var(--accent-ink);
+    font-weight:600; font-size:12.5px; cursor:pointer;
+  }
+  .shop-item button:disabled{background:var(--line-strong); color:var(--surface); cursor:not-allowed;}
+  .shop-empty{grid-column:1/-1; text-align:center; padding:30px; color:var(--ink-soft); font-size:13px;}
+
+  .toast{
+    position:fixed; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--surface); padding:12px 20px; border-radius:6px; font-size:13px;
+    opacity:0; pointer-events:none; transition:opacity 0.25s ease, transform 0.25s ease; z-index:60;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25); max-width:90vw; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l3 5h-2v4h-2V8H9l3-5z" fill="#F2F5F0"/><path d="M4 14l2.5-4.3 3.5 2-2.5 4.3-3.5-2z" fill="#F2F5F0" opacity="0.85"/><path d="M20 14l-2.5-4.3-3.5 2 2.5 4.3 3.5-2z" fill="#F2F5F0" opacity="0.85"/></svg></span>
+    <h1>Greenline Depot</h1>
+    <span class="sub">Member Portal</span>
+  </div>
+  <div class="who" id="whoBox" style="display:none;">
+    <span class="greet">Hi, <strong id="whoName" style="color:var(--ink)"></strong></span>
+    <button class="signout" id="signOutBtn" type="button">Sign out</button>
+  </div>
+</header>
+
+<div id="configWarning" class="config-warning" style="display:none;">
+  This page isn't connected to a database yet. Open <code>customer.html</code> and fill in the
+  <code>firebaseConfig</code> object near the top of the file with your Firebase project's settings.
+</div>
+
+<div id="authScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button type="button" class="active" id="tabSignIn">Sign in</button>
+      <button type="button" id="tabSignUp">Create account</button>
+    </div>
+
+    <div id="signInForm">
+      <h2>Welcome back</h2>
+      <p class="sub">Sign in to see your points and store credit.</p>
+      <label for="siEmail">Email</label>
+      <input type="email" id="siEmail" autocomplete="email">
+      <label for="siPassword">Password</label>
+      <input type="password" id="siPassword" autocomplete="current-password">
+      <div class="auth-error" id="siError"></div>
+      <button class="auth-submit" id="siSubmit" type="button">Sign in</button>
+    </div>
+
+    <div id="signUpForm" style="display:none;">
+      <h2>Join Greenline</h2>
+      <p class="sub">Create an account to start earning points.</p>
+      <label for="suName">Full name</label>
+      <input type="text" id="suName" autocomplete="name">
+      <label for="suPhone">Phone</label>
+      <input type="text" id="suPhone" placeholder="e.g. 555-0148" autocomplete="tel">
+      <label for="suEmail">Email</label>
+      <input type="email" id="suEmail" autocomplete="email">
+      <label for="suPassword">Password</label>
+      <input type="password" id="suPassword" autocomplete="new-password" placeholder="At least 6 characters">
+      <div class="auth-error" id="suError"></div>
+      <button class="auth-submit" id="suSubmit" type="button">Create account</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="appScreen" style="display:none;">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard" type="button">My account</button>
+    <button class="tab-btn" data-tab="leaderboard" type="button">Leaderboard</button>
+    <button class="tab-btn" data-tab="shop" type="button">Shop</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-dashboard">
+    <div class="balance-cards">
+      <div class="balance-card points"><div class="label">Store points</div><div class="value" id="dPoints">0</div></div>
+      <div class="balance-card cash"><div class="label">Store credit</div><div class="value" id="dCash">$0.00</div></div>
+    </div>
+    <div class="card">
+      <h3>Lifetime by material</h3>
+      <div id="breakdownList"></div>
+    </div>
+    <div class="card">
+      <h3>Recent activity</h3>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-leaderboard">
+    <div class="prize-banner"><span class="emoji">🧸</span><span><strong>This month's top prize:</strong> a squishie, awarded to whoever's sitting at #1 on the board.</span></div>
+    <div class="card" style="padding:6px 8px;">
+      <div id="lbList"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-shop">
+    <p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 16px;">Spend your store credit on rewards. Items are added by depot staff.</p>
+    <div class="shop-grid" id="shopGrid"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut, updateProfile
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit,
+    onSnapshot, runTransaction, increment, arrayUnion, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDHYljhaFnrvRmgl6-nwYrQm-oJvohKtCI",
+    authDomain: "scienceexhibitionnpsisparksg.firebaseapp.com",
+    projectId: "scienceexhibitionnpsisparksg",
+    storageBucket: "scienceexhibitionnpsisparksg.firebasestorage.app",
+    messagingSenderId: "125553329611",
+    appId: "1:125553329611:web:cee5db6dfded852848a24e",
+    measurementId: "G-YHTFQLH4F1"
+  };
+
+  // ------------------------------------------------------------------
+
+  var MATERIALS = {
+    paper:   { label: "Paper", color: "var(--paper)" },
+    cans:    { label: "Cans", color: "var(--cans)" },
+    plastic: { label: "Plastic", color: "var(--plastic)" },
+    glass:   { label: "Glass", color: "var(--glass)" }
+  };
+  var MAT_ORDER = ["paper","cans","plastic","glass"];
+
+  var isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("YOUR_") !== 0;
+  var els = {
+    configWarning: document.getElementById("configWarning"),
+    authScreen: document.getElementById("authScreen"),
+    appScreen: document.getElementById("appScreen"),
+    whoBox: document.getElementById("whoBox"),
+    whoName: document.getElementById("whoName"),
+    toast: document.getElementById("toast")
+  };
+
+  if(!isConfigured){
+    els.configWarning.style.display = "block";
+  } else {
+    initFirebaseApp();
+  }
+
+  function showToast(msg){
+    els.toast.textContent = msg;
+    els.toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ els.toast.classList.remove("show"); }, 2800);
+  }
+  function fmtMoney(n){ return "$" + (+n).toFixed(2); }
+  function escapeHtml(s){ var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+  function initFirebaseApp(){
+    var app = initializeApp(firebaseConfig);
+    var auth = getAuth(app);
+    var db = getFirestore(app);
+    var currentUid = null;
+    var unsubCustomer = null;
+    var unsubLeaderboard = null;
+    var unsubShop = null;
+    var customerData = null;
+    var shopItems = [];
+
+    // ---------- Auth tab toggling ----------
+    var tabSignIn = document.getElementById("tabSignIn");
+    var tabSignUp = document.getElementById("tabSignUp");
+    var signInForm = document.getElementById("signInForm");
+    var signUpForm = document.getElementById("signUpForm");
+    tabSignIn.addEventListener("click", function(){
+      tabSignIn.classList.add("active"); tabSignUp.classList.remove("active");
+      signInForm.style.display = "block"; signUpForm.style.display = "none";
+    });
+    tabSignUp.addEventListener("click", function(){
+      tabSignUp.classList.add("active"); tabSignIn.classList.remove("active");
+      signUpForm.style.display = "block"; signInForm.style.display = "none";
+    });
+
+    // ---------- Sign up ----------
+    document.getElementById("suSubmit").addEventListener("click", function(){
+      var name = document.getElementById("suName").value.trim();
+      var phone = document.getElementById("suPhone").value.trim();
+      var email = document.getElementById("suEmail").value.trim();
+      var pass = document.getElementById("suPassword").value;
+      var errEl = document.getElementById("suError");
+      errEl.textContent = "";
+      if(!name || !phone || !email || !pass){ errEl.textContent = "Please fill in every field."; return; }
+      if(pass.length < 6){ errEl.textContent = "Password must be at least 6 characters."; return; }
+      createUserWithEmailAndPassword(auth, email, pass).then(function(cred){
+        return updateProfile(cred.user, { displayName: name }).then(function(){
+          return setDoc(doc(db, "customers", cred.user.uid), {
+            name: name, email: email, phone: phone,
+            points: 0, cashback: 0,
+            totals: { paper:0, cans:0, plastic:0, glass:0 },
+            history: [], joinedAt: serverTimestamp()
+          });
+        }).then(function(){
+          return setDoc(doc(db, "leaderboard", cred.user.uid), { displayName: name, points: 0 });
+        });
+      }).catch(function(err){
+        errEl.textContent = friendlyAuthError(err);
+      });
+    });
+
+    // ---------- Sign in ----------
+    document.getElementById("siSubmit").addEventListener("click", function(){
+      var email = document.getElementById("siEmail").value.trim();
+      var pass = document.getElementById("siPassword").value;
+      var errEl = document.getElementById("siError");
+      errEl.textContent = "";
+      if(!email || !pass){ errEl.textContent = "Enter your email and password."; return; }
+      signInWithEmailAndPassword(auth, email, pass).catch(function(err){
+        errEl.textContent = friendlyAuthError(err);
+      });
+    });
+
+    function friendlyAuthError(err){
+      var code = err && err.code || "";
+      if(code.indexOf("email-already-in-use") > -1) return "That email already has an account — try signing in instead.";
+      if(code.indexOf("invalid-credential") > -1 || code.indexOf("wrong-password") > -1 || code.indexOf("user-not-found") > -1) return "Email or password is incorrect.";
+      if(code.indexOf("invalid-email") > -1) return "That doesn't look like a valid email address.";
+      if(code.indexOf("weak-password") > -1) return "Password must be at least 6 characters.";
+      return "Something went wrong. Please try again.";
+    }
+
+    document.getElementById("signOutBtn").addEventListener("click", function(){ signOut(auth); });
+
+    // ---------- Tabs ----------
+    document.querySelectorAll(".tab-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+        document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+        btn.classList.add("active");
+        document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // ---------- Auth state ----------
+    onAuthStateChanged(auth, function(user){
+      if(unsubCustomer){ unsubCustomer(); unsubCustomer = null; }
+      if(unsubLeaderboard){ unsubLeaderboard(); unsubLeaderboard = null; }
+      if(unsubShop){ unsubShop(); unsubShop = null; }
+
+      if(!user){
+        currentUid = null;
+        els.authScreen.style.display = "block";
+        els.appScreen.style.display = "none";
+        els.whoBox.style.display = "none";
+        return;
+      }
+      currentUid = user.uid;
+      els.authScreen.style.display = "none";
+      els.appScreen.style.display = "block";
+      els.whoBox.style.display = "flex";
+      els.whoName.textContent = user.displayName || user.email;
+
+      unsubCustomer = onSnapshot(doc(db, "customers", user.uid), function(snap){
+        customerData = snap.exists() ? snap.data() : null;
+        renderDashboard();
+      });
+      unsubLeaderboard = onSnapshot(query(collection(db, "leaderboard"), orderBy("points", "desc"), limit(10)), function(snap){
+        var rows = [];
+        snap.forEach(function(d){ rows.push({ id: d.id, data: d.data() }); });
+        renderLeaderboard(rows);
+      });
+      unsubShop = onSnapshot(collection(db, "shopItems"), function(snap){
+        shopItems = [];
+        snap.forEach(function(d){ shopItems.push({ id: d.id, data: d.data() }); });
+        renderShop();
+      });
+    });
+
+    // ---------- Dashboard ----------
+    function renderDashboard(){
+      if(!customerData) return;
+      document.getElementById("dPoints").textContent = Math.round(customerData.points || 0).toLocaleString();
+      document.getElementById("dCash").textContent = fmtMoney(customerData.cashback || 0);
+
+      var totals = customerData.totals || { paper:0, cans:0, plastic:0, glass:0 };
+      var maxKg = Math.max.apply(null, MAT_ORDER.map(function(m){ return totals[m] || 0; })) || 1;
+      var bd = document.getElementById("breakdownList");
+      bd.innerHTML = "";
+      MAT_ORDER.forEach(function(m){
+        var kg = totals[m] || 0;
+        var row = document.createElement("div");
+        row.className = "bd-row";
+        row.innerHTML =
+          '<span class="bd-label">' + MATERIALS[m].label + '</span>' +
+          '<span class="bd-bar-track"><span class="bd-bar" style="width:' + (kg/maxKg*100) + '%; background:' + MATERIALS[m].color + ';"></span></span>' +
+          '<span class="bd-val">' + kg.toFixed(1) + ' kg</span>';
+        bd.appendChild(row);
+      });
+
+      var hist = (customerData.history || []).slice().sort(function(a,b){
+        return new Date(b.date) - new Date(a.date);
+      });
+      var hl = document.getElementById("historyList");
+      hl.innerHTML = "";
+      if(hist.length === 0){
+        hl.innerHTML = '<div class="empty-note">No activity yet — visit the depot to start earning points.</div>';
+      } else {
+        hist.slice(0, 25).forEach(function(h){
+          var div = document.createElement("div");
+          div.className = "history-item";
+          var dateStr = new Date(h.date).toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+          if(h.type === "redeem"){
+            div.innerHTML =
+              '<div class="h-top"><span>' + dateStr + '</span><span>Shop</span></div>' +
+              '<div>Redeemed ' + escapeHtml(h.item || "item") + '</div>' +
+              '<div class="h-spend">-' + fmtMoney(h.cost || 0) + ' credit</div>';
+          } else {
+            var itemStr = (h.items || []).map(function(it){
+              return it.weight.toFixed(1) + "kg " + (MATERIALS[it.material] ? MATERIALS[it.material].label : it.material);
+            }).join(", ");
+            div.innerHTML =
+              '<div class="h-top"><span>' + dateStr + '</span><span>Drop-off</span></div>' +
+              '<div>' + escapeHtml(itemStr) + '</div>' +
+              '<div class="h-gain">+' + (h.points || 0) + ' pts &nbsp;·&nbsp; +' + fmtMoney(h.cash || 0) + ' credit</div>';
+          }
+          hl.appendChild(div);
+        });
+      }
+    }
+
+    // ---------- Leaderboard ----------
+    function renderLeaderboard(rows){
+      var lb = document.getElementById("lbList");
+      lb.innerHTML = "";
+      if(rows.length === 0){
+        lb.innerHTML = '<div class="empty-note">No one on the board yet — be the first to recycle!</div>';
+        return;
+      }
+      rows.forEach(function(r, idx){
+        var isMe = r.id === currentUid;
+        var row = document.createElement("div");
+        row.className = "lb-row" + (isMe ? " me" : "");
+        var rankDisplay = idx === 0 ? "🧸" : (idx + 1);
+        row.innerHTML =
+          '<span class="lb-rank' + (idx === 0 ? " first" : "") + '">' + rankDisplay + '</span>' +
+          '<span class="lb-name">' + escapeHtml(r.data.displayName || "Member") + (isMe ? '<span class="you-tag">YOU</span>' : '') + '</span>' +
+          '<span class="lb-pts">' + Math.round(r.data.points || 0).toLocaleString() + ' pts</span>';
+        lb.appendChild(row);
+      });
+    }
+
+    // ---------- Shop ----------
+    function renderShop(){
+      var grid = document.getElementById("shopGrid");
+      grid.innerHTML = "";
+      if(shopItems.length === 0){
+        grid.innerHTML = '<div class="shop-empty">No items in the shop yet — check back soon.</div>';
+        return;
+      }
+      shopItems.forEach(function(item){
+        var d = item.data;
+        var canAfford = customerData && (customerData.cashback || 0) >= (d.costCredit || 0);
+        var inStock = (d.stock || 0) > 0;
+        var card = document.createElement("div");
+        card.className = "shop-item";
+        card.innerHTML =
+          '<div class="emoji">' + (d.emoji || "🎁") + '</div>' +
+          '<div class="iname">' + escapeHtml(d.name || "Reward") + '</div>' +
+          '<div class="icost">' + fmtMoney(d.costCredit || 0) + ' credit</div>' +
+          '<div class="istock">' + (inStock ? d.stock + " left" : "Out of stock") + '</div>' +
+          '<button type="button" ' + (canAfford && inStock ? "" : "disabled") + '>' +
+          (inStock ? (canAfford ? "Redeem" : "Not enough credit") : "Out of stock") + '</button>';
+        card.querySelector("button").addEventListener("click", function(){
+          redeemItem(item.id);
+        });
+        grid.appendChild(card);
+      });
+    }
+
+    function redeemItem(itemId){
+      if(!currentUid) return;
+      var itemRef = doc(db, "shopItems", itemId);
+      var custRef = doc(db, "customers", currentUid);
+      runTransaction(db, function(tx){
+        return tx.get(itemRef).then(function(itemSnap){
+          return tx.get(custRef).then(function(custSnap){
+            if(!itemSnap.exists()) throw new Error("That item is no longer available.");
+            if(!custSnap.exists()) throw new Error("Account not found.");
+            var item = itemSnap.data();
+            var cust = custSnap.data();
+            if((item.stock || 0) <= 0) throw new Error("That item just sold out.");
+            if((cust.cashback || 0) < (item.costCredit || 0)) throw new Error("Not enough store credit.");
+            tx.update(itemRef, { stock: increment(-1) });
+            tx.update(custRef, {
+              cashback: increment(-(item.costCredit || 0)),
+              history: arrayUnion({
+                type: "redeem", date: new Date().toISOString(),
+                item: item.name || "Reward", cost: item.costCredit || 0
+              })
+            });
+            return item.name;
+          });
+        });
+      }).then(function(name){
+        showToast("Redeemed " + name + "!");
+      }).catch(function(err){
+        showToast(err.message || "Couldn't complete that redemption.");
+      });
+    }
+  }
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDHYljhaFnrvRmgl6-nwYrQm-oJvohKtCI",
+    authDomain: "scienceexhibitionnpsisparksg.firebaseapp.com",
+    projectId: "scienceexhibitionnpsisparksg",
+    storageBucket: "scienceexhibitionnpsisparksg.firebasestorage.app",
+    messagingSenderId: "125553329611",
+    appId: "1:125553329611:web:cee5db6dfded852848a24e",
+    measurementId: "G-YHTFQLH4F1"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+</body>
+</html>
