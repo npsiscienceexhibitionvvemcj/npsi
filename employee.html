@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Greenline Depot — Intake Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E7E4DA; --surface:#FBFAF6; --surface-2:#F1EFE7; --ink:#181D19; --ink-soft:#5B6259;
+    --line:#D3CEC0; --line-strong:#B7B09D; --paper:#A9723C; --paper-bg:#F2E5D4; --cans:#6E7A80; --cans-bg:#E7EAEB;
+    --plastic:#3E8C5C; --plastic-bg:#E1EFE4; --glass:#2E7A78; --glass-bg:#DCEBEA;
+    --accent:#2E6F4E; --accent-ink:#F2F5F0; --gold:#B6862C; --gold-bg:#F4E9D2; --danger:#A23B2E; --radius-sm:3px;
+    --font-display:'Space Grotesk', sans-serif; --font-body:'Inter', sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14170F; --surface:#1C201A; --surface-2:#212620; --ink:#EDECE4; --ink-soft:#9AA294;
+      --line:#333B31; --line-strong:#454E40; --paper-bg:#2C2418; --cans-bg:#20262A; --plastic-bg:#182720;
+      --glass-bg:#122624; --accent-ink:#0E1310; --gold-bg:#2B2311;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body);
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); -webkit-font-smoothing:antialiased;}
+  button, input{font-family:inherit;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  header.topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 22px;
+    border-bottom:1px solid var(--line-strong); background:var(--surface); position:sticky; top:env(safe-area-inset-top,0px);
+    z-index:20; flex-wrap:wrap; gap:10px;}
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand .mark{width:30px; height:30px; border-radius:50%; background:var(--accent); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .brand .mark svg{width:16px; height:16px;}
+  .brand h1{font-family:var(--font-display); font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em;}
+  .brand .sub{font-size:12.5px; color:var(--ink-soft); margin-left:2px;}
+  .topbar-right{display:flex; align-items:center; gap:14px; font-size:13px; color:var(--ink-soft);}
+  .topbar-right .clock{font-family:var(--font-mono); color:var(--ink); font-size:13px;}
+  .theme-toggle{border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink); padding:6px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px;}
+  .signout{border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink); padding:6px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px;}
+
+  /* ---- auth / gate ---- */
+  .gate-wrap{display:flex; align-items:center; justify-content:center; min-height:80vh; padding:20px;}
+  .gate-card{max-width:380px; width:100%; background:var(--surface); border:1px solid var(--line-strong); border-radius:10px; padding:28px 26px;}
+  .gate-card h2{font-family:var(--font-display); font-size:19px; margin:0 0 4px;}
+  .gate-card p.sub{color:var(--ink-soft); font-size:13px; margin:0 0 20px; line-height:1.5;}
+  .gate-card label{display:block; font-size:12px; color:var(--ink-soft); margin:12px 0 5px;}
+  .gate-card label:first-of-type{margin-top:0;}
+  .gate-card input{width:100%; padding:10px 11px; border:1px solid var(--line-strong); border-radius:5px; background:var(--surface-2); color:var(--ink); font-size:13.5px;}
+  .gate-error{color:var(--danger); font-size:12px; margin-top:10px; min-height:14px; line-height:1.4;}
+  .gate-submit{width:100%; margin-top:18px; padding:12px; border:none; background:var(--accent); color:var(--accent-ink); font-weight:600; font-size:13.5px; border-radius:6px; cursor:pointer;}
+  .gate-note{font-size:11.5px; color:var(--ink-soft); margin-top:14px; line-height:1.5;}
+  .config-warning{max-width:440px; margin:0 auto; background:var(--gold-bg); border:1px dashed var(--gold); border-radius:8px; padding:18px 20px; font-size:13px; line-height:1.6;}
+
+  .app{display:grid; grid-template-columns: 260px 1fr 340px; gap:1px; background:var(--line); min-height:calc(100% - 60px);}
+  .col{background:var(--bg);}
+  .panel{background:var(--surface); border-bottom:1px solid var(--line); padding:16px 18px;}
+  .panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .panel-head h2{font-family:var(--font-display); font-size:12px; font-weight:600; margin:0; color:var(--ink-soft); letter-spacing:0.02em;}
+  .panel-head button.link-btn{border:none; background:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer;}
+
+  .search-wrap{padding:14px 18px; border-bottom:1px solid var(--line); background:var(--surface);}
+  .search-wrap input{width:100%; padding:9px 10px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); font-size:13.5px; background:var(--surface-2); color:var(--ink);}
+  .cust-list{list-style:none; margin:0; padding:0;}
+  .cust-item{display:block; width:100%; text-align:left; border:none; border-bottom:1px solid var(--line); background:var(--surface); padding:12px 18px; cursor:pointer; color:var(--ink);}
+  .cust-item:hover{background:var(--surface-2);}
+  .cust-item.active{background:var(--plastic-bg); box-shadow:inset 3px 0 0 var(--accent);}
+  .cust-item .name{font-weight:600; font-size:13.5px;}
+  .cust-item .meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px; font-family:var(--font-mono);}
+  .empty-note{padding:18px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+
+  .scale-module{background:var(--surface); border:1px solid var(--line-strong); border-radius:6px; padding:22px; text-align:center; margin-bottom:16px;}
+  .scale-readout{font-family:var(--font-mono); font-weight:600; font-size:clamp(40px, 6vw, 58px); letter-spacing:0.01em; color:var(--ink); line-height:1;}
+  .scale-readout .unit{font-size:0.35em; color:var(--ink-soft); margin-left:6px;}
+  .scale-sub{font-size:11.5px; color:var(--ink-soft); margin-top:6px; letter-spacing:0.02em;}
+  .scale-input{width:100%; margin-top:16px; -webkit-appearance:none; appearance:none; height:4px; background:var(--line-strong); border-radius:2px; outline:none;}
+  .scale-input::-webkit-slider-thumb{-webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--accent); cursor:pointer; border:3px solid var(--surface); box-shadow:0 0 0 1px var(--accent);}
+  .quick-add{display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;}
+  .quick-add button{padding:6px 12px; border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink); border-radius:20px; font-size:12.5px; cursor:pointer; font-family:var(--font-mono);}
+  .quick-add button:hover{border-color:var(--accent); color:var(--accent);}
+  .quick-add button.reset{color:var(--danger); border-color:transparent;}
+
+  .material-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px;}
+  .mat-btn{border:1.5px solid var(--line-strong); background:var(--surface); border-radius:6px; padding:12px 12px; text-align:left; cursor:pointer;}
+  .mat-btn .swatch{width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:7px;}
+  .mat-btn .mname{font-weight:600; font-size:13.5px; display:inline-flex; align-items:center;}
+  .mat-btn .mrate{font-size:11px; color:var(--ink-soft); margin-top:5px; font-family:var(--font-mono);}
+  .mat-btn[data-mat="paper"].active{background:var(--paper-bg); border-color:var(--paper);}
+  .mat-btn[data-mat="cans"].active{background:var(--cans-bg); border-color:var(--cans);}
+  .mat-btn[data-mat="plastic"].active{background:var(--plastic-bg); border-color:var(--plastic);}
+  .mat-btn[data-mat="glass"].active{background:var(--glass-bg); border-color:var(--glass);}
+  .mat-btn[data-mat="paper"] .swatch{background:var(--paper);}
+  .mat-btn[data-mat="cans"] .swatch{background:var(--cans);}
+  .mat-btn[data-mat="plastic"] .swatch{background:var(--plastic);}
+  .mat-btn[data-mat="glass"] .swatch{background:var(--glass);}
+
+  .add-line-btn{width:100%; padding:12px; border:none; background:var(--accent); color:var(--accent-ink); font-weight:600; font-size:13.5px; border-radius:6px; cursor:pointer;}
+  .add-line-btn:disabled{background:var(--line-strong); color:var(--surface); cursor:not-allowed;}
+  .add-line-btn:not(:disabled):hover{opacity:0.92;}
+
+  .ticket{border:1px solid var(--line); border-radius:6px; overflow:hidden;}
+  .ticket-row{display:grid; grid-template-columns:14px 1fr auto auto auto; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); font-size:13px;}
+  .ticket-row:last-child{border-bottom:none;}
+  .ticket-row .dot{width:9px; height:9px; border-radius:50%;}
+  .ticket-row .w{font-family:var(--font-mono); color:var(--ink-soft);}
+  .ticket-row .pts{font-family:var(--font-mono); color:var(--gold); font-size:12px;}
+  .ticket-row .rm{border:none; background:none; color:var(--danger); cursor:pointer; font-size:15px; line-height:1; padding:2px 4px;}
+  .ticket-empty{padding:22px 12px; text-align:center; color:var(--ink-soft); font-size:12.5px;}
+  .ticket-totals{display:flex; justify-content:space-between; padding:12px 14px; background:var(--surface-2); border-top:1px solid var(--line); font-size:13px;}
+  .ticket-totals .t-item b{font-family:var(--font-mono); font-size:14.5px;}
+  .complete-btn{width:100%; padding:13px; margin-top:12px; border:none; background:var(--ink); color:var(--surface); font-weight:600; font-size:14px; border-radius:6px; cursor:pointer;}
+  .complete-btn:disabled{background:var(--line-strong); color:var(--surface); cursor:not-allowed;}
+  .complete-btn:not(:disabled):hover{opacity:0.9;}
+  .no-customer-banner{padding:12px 14px; background:var(--gold-bg); border:1px dashed var(--gold); border-radius:6px; font-size:12.5px; color:var(--ink); margin-bottom:16px;}
+
+  .profile-name{font-family:var(--font-display); font-size:19px; font-weight:700; margin:0 0 2px;}
+  .profile-id{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft); margin-bottom:14px; word-break:break-all;}
+  .profile-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px; margin-bottom:16px;}
+  .profile-grid div span{display:block; color:var(--ink-soft); font-size:11px; margin-bottom:2px;}
+  .balance-cards{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px;}
+  .balance-card{border:1px solid var(--line); border-radius:6px; padding:12px;}
+  .balance-card .label{font-size:11px; color:var(--ink-soft); letter-spacing:0.02em;}
+  .balance-card .value{font-family:var(--font-mono); font-size:21px; font-weight:600; margin-top:4px;}
+  .balance-card.points{background:var(--gold-bg);}
+  .balance-card.cash{background:var(--plastic-bg);}
+  .balance-card.points .value{color:var(--gold);}
+  .balance-card.cash .value{color:var(--accent);}
+
+  .breakdown{margin-bottom:18px;}
+  .breakdown h3, .history h3{font-family:var(--font-display); font-size:11.5px; font-weight:600; color:var(--ink-soft); margin:0 0 10px; letter-spacing:0.02em;}
+  .bd-row{display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px;}
+  .bd-row .bd-label{width:52px; flex-shrink:0; color:var(--ink-soft);}
+  .bd-bar-track{flex:1; height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden;}
+  .bd-bar{height:100%; border-radius:3px;}
+  .bd-row .bd-val{font-family:var(--font-mono); width:52px; text-align:right; flex-shrink:0;}
+
+  .history-list{max-height:280px; overflow-y:auto; border:1px solid var(--line); border-radius:6px;}
+  .history-item{padding:10px 12px; border-bottom:1px solid var(--line); font-size:12px;}
+  .history-item:last-child{border-bottom:none;}
+  .history-item .h-top{display:flex; justify-content:space-between; color:var(--ink-soft); font-family:var(--font-mono); font-size:11px; margin-bottom:4px;}
+  .history-item .h-gain{color:var(--accent); font-family:var(--font-mono); font-size:11.5px; margin-top:3px;}
+  .history-item .h-spend{color:var(--danger); font-family:var(--font-mono); font-size:11.5px; margin-top:3px;}
+  .history-empty{padding:20px 12px; text-align:center; color:var(--ink-soft); font-size:12px;}
+
+  .no-selection{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:60px 24px; text-align:center; color:var(--ink-soft);}
+  .no-selection .mark-lg{width:44px; height:44px; border-radius:50%; background:var(--surface-2); border:1px solid var(--line-strong); display:flex; align-items:center; justify-content:center; margin-bottom:14px;}
+  .no-selection p{font-size:13px; max-width:220px; line-height:1.5; margin:0;}
+
+  .modal-overlay{position:fixed; inset:0; background:rgba(15,18,13,0.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px;}
+  .modal{background:var(--surface); border-radius:8px; width:100%; max-width:380px; padding:22px; border:1px solid var(--line-strong); max-height:85vh; overflow-y:auto;}
+  .modal h3{font-family:var(--font-display); font-size:16px; margin:0 0 16px;}
+  .modal label{display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; margin-top:12px;}
+  .modal label:first-of-type{margin-top:0;}
+  .modal input{width:100%; padding:9px 10px; border:1px solid var(--line-strong); border-radius:4px; font-size:13.5px; background:var(--surface-2); color:var(--ink);}
+  .field-error{color:var(--danger); font-size:11.5px; margin-top:5px; min-height:14px;}
+  .modal-actions{display:flex; gap:10px; margin-top:20px;}
+  .modal-actions button{flex:1; padding:10px; border-radius:5px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--line-strong);}
+  .modal-actions .cancel{background:var(--surface); color:var(--ink);}
+  .modal-actions .save{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .shop-manage-list{border:1px solid var(--line); border-radius:6px; margin-top:16px; max-height:220px; overflow-y:auto;}
+  .shop-manage-row{display:grid; grid-template-columns:24px 1fr auto auto; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--line); font-size:12.5px;}
+  .shop-manage-row:last-child{border-bottom:none;}
+  .shop-manage-row .rm{border:none; background:none; color:var(--danger); cursor:pointer; font-size:15px;}
+
+  .toast{position:fixed; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--surface); padding:12px 20px; border-radius:6px; font-size:13px;
+    opacity:0; pointer-events:none; transition:opacity 0.25s ease, transform 0.25s ease; z-index:60;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25); max-width:90vw; text-align:center;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+  @media (max-width:980px){ .app{grid-template-columns:1fr;} .col{width:100%;} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l3 5h-2v4h-2V8H9l3-5z" fill="#F2F5F0"/><path d="M4 14l2.5-4.3 3.5 2-2.5 4.3-3.5-2z" fill="#F2F5F0" opacity="0.85"/><path d="M20 14l-2.5-4.3-3.5 2 2.5 4.3 3.5-2z" fill="#F2F5F0" opacity="0.85"/></svg></span>
+    <h1>Greenline Depot</h1>
+    <span class="sub">Intake Terminal</span>
+  </div>
+  <div class="topbar-right" id="topbarRight" style="display:none;">
+    <span>Attendant: <strong id="employeeLabel" style="color:var(--ink)"></strong></span>
+    <span class="clock" id="clock">—</span>
+    <button class="theme-toggle" id="themeToggle" type="button">Dark mode</button>
+    <button class="signout" id="signOutBtn" type="button">Sign out</button>
+  </div>
+</header>
+
+<div id="configWarning" class="gate-wrap" style="display:none;">
+  <div class="config-warning">
+    This page isn't connected to a database yet. Open <code>employee.html</code> and fill in the
+    <code>firebaseConfig</code> object near the top of the file — it should match the one in
+    <code>customer.html</code> so both apps share the same data.
+  </div>
+</div>
+
+<div id="gateScreen" class="gate-wrap" style="display:none;">
+  <div class="gate-card">
+    <h2>Staff sign-in</h2>
+    <p class="sub">Sign in with your depot staff account to open the terminal.</p>
+    <label for="empEmail">Email</label>
+    <input type="email" id="empEmail" autocomplete="email">
+    <label for="empPassword">Password</label>
+    <input type="password" id="empPassword" autocomplete="current-password">
+    <div class="gate-error" id="gateError"></div>
+    <button class="gate-submit" id="gateSubmit" type="button">Sign in</button>
+    <p class="gate-note">Staff accounts are created by signing up in the member portal, then granting the "employee" role for that account in the Firebase console. See the setup notes for details.</p>
+  </div>
+</div>
+
+<div id="notEmployeeScreen" class="gate-wrap" style="display:none;">
+  <div class="gate-card">
+    <h2>Not authorized</h2>
+    <p class="sub">This account is signed in but doesn't have the employee role yet. Ask an administrator to grant it in the Firebase console, then sign in again.</p>
+    <button class="gate-submit" id="notEmpSignOut" type="button">Sign out</button>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none;">
+  <div class="col">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search name, email or phone…" autocomplete="off">
+    </div>
+    <div class="panel-head" style="padding:12px 18px 0;"><h2>Customers</h2><button class="link-btn" id="shopManageBtn" type="button">Manage shop</button></div>
+    <ul class="cust-list" id="custList"></ul>
+  </div>
+
+  <div class="col">
+    <div class="panel" style="border-bottom:none;">
+      <div id="noCustomerBanner" class="no-customer-banner" style="display:none;">
+        Select a customer on the left before logging materials.
+      </div>
+      <div class="scale-module">
+        <div class="scale-readout"><span id="weightDisplay">0.0</span><span class="unit">kg</span></div>
+        <div class="scale-sub" id="scaleSub">Place items on scale — no material selected</div>
+        <input type="range" min="0" max="50" step="0.1" value="0" class="scale-input" id="weightSlider">
+        <div class="quick-add">
+          <button type="button" data-add="0.5">+0.5</button>
+          <button type="button" data-add="1">+1</button>
+          <button type="button" data-add="5">+5</button>
+          <button type="button" data-add="10">+10</button>
+          <button type="button" class="reset" data-add="reset">Reset</button>
+        </div>
+      </div>
+      <div class="panel-head" style="margin-bottom:10px;"><h2>Material</h2></div>
+      <div class="material-grid" id="materialGrid"></div>
+      <button class="add-line-btn" id="addLineBtn" type="button" disabled>Add to ticket</button>
+    </div>
+    <div class="panel" style="border-top:1px solid var(--line);">
+      <div class="panel-head"><h2>Current ticket</h2></div>
+      <div class="ticket" id="ticket"><div class="ticket-empty">No items yet — weigh a material and add it to the ticket.</div></div>
+      <div class="ticket-totals" id="ticketTotals" style="display:none;">
+        <div class="t-item">Weight<br><b id="totalWeight">0.0 kg</b></div>
+        <div class="t-item">Points<br><b id="totalPoints">0</b></div>
+        <div class="t-item">Cashback<br><b id="totalCash">$0.00</b></div>
+      </div>
+      <button class="complete-btn" id="completeBtn" type="button" disabled>Complete transaction &amp; issue rewards</button>
+    </div>
+  </div>
+
+  <div class="col" id="profileCol">
+    <div class="no-selection" id="noSelection">
+      <span class="mark-lg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M5 20c0-3.8 3.1-6.5 7-6.5s7 2.7 7 6.5" stroke="currentColor" stroke-width="1.6"/></svg></span>
+      <p>Choose a customer from the directory to view their recycling history, points and cashback balance.</p>
+    </div>
+    <div id="profileContent" style="display:none;">
+      <div class="panel">
+        <h2 class="profile-name" id="pName"></h2>
+        <div class="profile-id" id="pId"></div>
+        <div class="profile-grid">
+          <div><span>Phone</span><span id="pPhone"></span></div>
+          <div><span>Email</span><span id="pEmail"></span></div>
+          <div><span>Total recycled</span><span id="pTotalKg"></span></div>
+          <div><span>Member since</span><span id="pSince"></span></div>
+        </div>
+        <div class="balance-cards">
+          <div class="balance-card points"><div class="label">Store points</div><div class="value" id="pPoints">0</div></div>
+          <div class="balance-card cash"><div class="label">Cashback balance</div><div class="value" id="pCash">$0.00</div></div>
+        </div>
+        <div class="breakdown"><h3>Lifetime by material</h3><div id="breakdownList"></div></div>
+      </div>
+      <div class="panel" style="border-top:1px solid var(--line);">
+        <div class="history"><h3>Transaction history</h3><div class="history-list" id="historyList"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shopModal" style="display:none;">
+  <div class="modal">
+    <h3>Manage shop items</h3>
+    <label for="itemName">Item name</label>
+    <input type="text" id="itemName" placeholder="e.g. Depot squishie">
+    <label for="itemEmoji">Emoji</label>
+    <input type="text" id="itemEmoji" placeholder="🧸" maxlength="4">
+    <label for="itemCost">Cost (store credit, $)</label>
+    <input type="number" id="itemCost" min="0" step="0.01" placeholder="5.00">
+    <label for="itemStock">Stock</label>
+    <input type="number" id="itemStock" min="0" step="1" placeholder="10">
+    <div class="field-error" id="shopFormError"></div>
+    <div class="modal-actions">
+      <button class="cancel" id="shopModalClose" type="button">Close</button>
+      <button class="save" id="itemAddBtn" type="button">Add item</button>
+    </div>
+    <div class="shop-manage-list" id="shopManageList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, collection, onSnapshot, updateDoc, deleteDoc, setDoc,
+    increment, arrayUnion
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ------------------------------------------------------------------
+  // PASTE THE SAME FIREBASE CONFIG USED IN customer.html
+  // ------------------------------------------------------------------
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDHYljhaFnrvRmgl6-nwYrQm-oJvohKtCI",
+    authDomain: "scienceexhibitionnpsisparksg.firebaseapp.com",
+    projectId: "scienceexhibitionnpsisparksg",
+    storageBucket: "scienceexhibitionnpsisparksg.firebasestorage.app",
+    messagingSenderId: "125553329611",
+    appId: "1:125553329611:web:cee5db6dfded852848a24e",
+    measurementId: "G-YHTFQLH4F1"
+  };
+
+  };
+  // ------------------------------------------------------------------
+
+  var MATERIALS = {
+    paper:   { label: "Paper & Cardboard", cash: 0.05, points: 2,  color: "var(--paper)"   },
+    cans:    { label: "Aluminum Cans",     cash: 0.80, points: 20, color: "var(--cans)"    },
+    plastic: { label: "Plastic (PET/HDPE)",cash: 0.20, points: 8,  color: "var(--plastic)" },
+    glass:   { label: "Glass",             cash: 0.03, points: 1,  color: "var(--glass)"   }
+  };
+  var MAT_ORDER = ["paper","cans","plastic","glass"];
+
+  var state = { customers: [], selectedId: null, material: null, weight: 0, ticket: [], shopItems: [] };
+
+  function fmtMoney(n){ return "$" + (+n).toFixed(2); }
+  function escapeHtml(s){ var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+  function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function totalKg(c){ var t = c.totals || {}; return MAT_ORDER.reduce(function(s,m){ return s + (t[m]||0); }, 0); }
+
+  var els = {
+    configWarning: document.getElementById("configWarning"),
+    gateScreen: document.getElementById("gateScreen"),
+    notEmployeeScreen: document.getElementById("notEmployeeScreen"),
+    app: document.getElementById("app"),
+    topbarRight: document.getElementById("topbarRight"),
+    employeeLabel: document.getElementById("employeeLabel"),
+    custList: document.getElementById("custList"),
+    searchInput: document.getElementById("searchInput"),
+    weightDisplay: document.getElementById("weightDisplay"),
+    weightSlider: document.getElementById("weightSlider"),
+    scaleSub: document.getElementById("scaleSub"),
+    materialGrid: document.getElementById("materialGrid"),
+    addLineBtn: document.getElementById("addLineBtn"),
+    ticket: document.getElementById("ticket"),
+    ticketTotals: document.getElementById("ticketTotals"),
+    totalWeight: document.getElementById("totalWeight"),
+    totalPoints: document.getElementById("totalPoints"),
+    totalCash: document.getElementById("totalCash"),
+    completeBtn: document.getElementById("completeBtn"),
+    noCustomerBanner: document.getElementById("noCustomerBanner"),
+    noSelection: document.getElementById("noSelection"),
+    profileContent: document.getElementById("profileContent"),
+    pName: document.getElementById("pName"), pId: document.getElementById("pId"),
+    pPhone: document.getElementById("pPhone"), pEmail: document.getElementById("pEmail"),
+    pSince: document.getElementById("pSince"), pTotalKg: document.getElementById("pTotalKg"),
+    pPoints: document.getElementById("pPoints"), pCash: document.getElementById("pCash"),
+    breakdownList: document.getElementById("breakdownList"), historyList: document.getElementById("historyList"),
+    toast: document.getElementById("toast")
+  };
+
+  function showToast(msg){
+    els.toast.textContent = msg;
+    els.toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ els.toast.classList.remove("show"); }, 2800);
+  }
+
+  var isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("YOUR_") !== 0;
+  if(!isConfigured){
+    els.configWarning.style.display = "flex";
+  } else {
+    boot();
+  }
+
+  function boot(){
+    var app = initializeApp(firebaseConfig);
+    var auth = getAuth(app);
+    var db = getFirestore(app);
+    var unsubCustomers = null;
+    var unsubShop = null;
+
+    document.getElementById("gateSubmit").addEventListener("click", function(){
+      var email = document.getElementById("empEmail").value.trim();
+      var pass = document.getElementById("empPassword").value;
+      var errEl = document.getElementById("gateError");
+      errEl.textContent = "";
+      if(!email || !pass){ errEl.textContent = "Enter your email and password."; return; }
+      signInWithEmailAndPassword(auth, email, pass).catch(function(err){
+        errEl.textContent = "Email or password is incorrect.";
+      });
+    });
+    document.getElementById("notEmpSignOut").addEventListener("click", function(){ signOut(auth); });
+    document.getElementById("signOutBtn").addEventListener("click", function(){ signOut(auth); });
+
+    onAuthStateChanged(auth, function(user){
+      if(unsubCustomers){ unsubCustomers(); unsubCustomers = null; }
+      if(unsubShop){ unsubShop(); unsubShop = null; }
+      hideAll();
+      if(!user){
+        els.gateScreen.style.display = "flex";
+        els.topbarRight.style.display = "none";
+        return;
+      }
+      getDoc(doc(db, "roles", user.uid)).then(function(snap){
+        var isEmployee = snap.exists() && snap.data().role === "employee";
+        if(!isEmployee){
+          els.notEmployeeScreen.style.display = "flex";
+          els.topbarRight.style.display = "none";
+          return;
+        }
+        els.app.style.display = "grid";
+        els.topbarRight.style.display = "flex";
+        els.employeeLabel.textContent = user.displayName || user.email;
+
+        unsubCustomers = onSnapshot(collection(db, "customers"), function(qs){
+          var list = [];
+          qs.forEach(function(d){ list.push(Object.assign({ id: d.id }, d.data())); });
+          state.customers = list;
+          renderCustList();
+          renderProfile();
+        });
+        unsubShop = onSnapshot(collection(db, "shopItems"), function(qs){
+          var list = [];
+          qs.forEach(function(d){ list.push(Object.assign({ id: d.id }, d.data())); });
+          state.shopItems = list;
+          renderShopManageList();
+        });
+      });
+    });
+
+    function hideAll(){
+      els.gateScreen.style.display = "none";
+      els.notEmployeeScreen.style.display = "none";
+      els.app.style.display = "none";
+    }
+
+    // ---------- Material grid ----------
+    function renderMaterialGrid(){
+      els.materialGrid.innerHTML = "";
+      MAT_ORDER.forEach(function(key){
+        var m = MATERIALS[key];
+        var btn = document.createElement("button");
+        btn.type = "button"; btn.className = "mat-btn"; btn.dataset.mat = key;
+        btn.innerHTML = '<div class="mname"><span class="swatch"></span>' + m.label + '</div>' +
+          '<div class="mrate">' + fmtMoney(m.cash) + '/kg · ' + m.points + ' pts/kg</div>';
+        btn.addEventListener("click", function(){
+          state.material = key; renderMaterialGrid(); updateScaleSub(); updateAddLineState();
+        });
+        els.materialGrid.appendChild(btn);
+      });
+      if(state.material){
+        var active = els.materialGrid.querySelector('[data-mat="'+state.material+'"]');
+        if(active) active.classList.add("active");
+      }
+    }
+    function updateScaleSub(){
+      els.scaleSub.textContent = state.material
+        ? MATERIALS[state.material].label + " selected — adjust weight, then add to ticket"
+        : "Place items on scale — no material selected";
+    }
+    function updateAddLineState(){
+      els.addLineBtn.disabled = !(state.material && state.weight > 0 && state.selectedId);
+    }
+    function setWeight(v){
+      v = Math.max(0, Math.min(50, +v));
+      state.weight = Math.round(v*10)/10;
+      els.weightDisplay.textContent = state.weight.toFixed(1);
+      els.weightSlider.value = state.weight;
+      updateAddLineState();
+    }
+
+    // ---------- Customer directory ----------
+    function renderCustList(){
+      var q = els.searchInput.value.trim().toLowerCase();
+      var list = state.customers.filter(function(c){
+        if(!q) return true;
+        return (c.name||"").toLowerCase().indexOf(q) > -1 ||
+               (c.email||"").toLowerCase().indexOf(q) > -1 ||
+               (c.phone||"").toLowerCase().indexOf(q) > -1;
+      });
+      els.custList.innerHTML = "";
+      if(list.length === 0){
+        var empty = document.createElement("div");
+        empty.className = "empty-note";
+        empty.textContent = state.customers.length === 0
+          ? "No member accounts yet — customers sign up in the member portal."
+          : "No customers match that search.";
+        els.custList.appendChild(empty);
+        return;
+      }
+      list.forEach(function(c){
+        var li = document.createElement("li");
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cust-item" + (c.id === state.selectedId ? " active" : "");
+        btn.innerHTML = '<div class="name">' + escapeHtml(c.name || "Member") + '</div>' +
+          '<div class="meta">' + escapeHtml(c.phone || "—") + ' · ' + totalKg(c).toFixed(1) + ' kg lifetime</div>';
+        btn.addEventListener("click", function(){
+          state.selectedId = c.id;
+          renderCustList(); renderProfile(); updateAddLineState();
+          els.noCustomerBanner.style.display = "none";
+        });
+        li.appendChild(btn);
+        els.custList.appendChild(li);
+      });
+    }
+    function getSelected(){ return state.customers.find(function(c){ return c.id === state.selectedId; }); }
+
+    function renderProfile(){
+      var c = getSelected();
+      if(!c){ els.noSelection.style.display = "flex"; els.profileContent.style.display = "none"; return; }
+      els.noSelection.style.display = "none";
+      els.profileContent.style.display = "block";
+      els.pName.textContent = c.name || "Member";
+      els.pId.textContent = c.id;
+      els.pPhone.textContent = c.phone || "—";
+      els.pEmail.textContent = c.email || "—";
+      els.pSince.textContent = c.joinedAt && c.joinedAt.toDate ? c.joinedAt.toDate().toLocaleDateString() : "—";
+      els.pTotalKg.textContent = totalKg(c).toFixed(1) + " kg";
+      els.pPoints.textContent = Math.round(c.points || 0).toLocaleString();
+      els.pCash.textContent = fmtMoney(c.cashback || 0);
+
+      var totals = c.totals || {};
+      var maxKg = Math.max.apply(null, MAT_ORDER.map(function(m){ return totals[m]||0; })) || 1;
+      els.breakdownList.innerHTML = "";
+      MAT_ORDER.forEach(function(m){
+        var kg = totals[m] || 0;
+        var row = document.createElement("div");
+        row.className = "bd-row";
+        row.innerHTML = '<span class="bd-label">' + capitalize(m) + '</span>' +
+          '<span class="bd-bar-track"><span class="bd-bar" style="width:' + (kg/maxKg*100) + '%; background:' + MATERIALS[m].color + ';"></span></span>' +
+          '<span class="bd-val">' + kg.toFixed(1) + ' kg</span>';
+        els.breakdownList.appendChild(row);
+      });
+
+      var hist = (c.history || []).slice().sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+      els.historyList.innerHTML = "";
+      if(hist.length === 0){
+        els.historyList.innerHTML = '<div class="history-empty">No transactions logged yet.</div>';
+      } else {
+        hist.forEach(function(h){
+          var div = document.createElement("div");
+          div.className = "history-item";
+          var dateStr = new Date(h.date).toLocaleDateString();
+          if(h.type === "redeem"){
+            div.innerHTML = '<div class="h-top"><span>' + dateStr + '</span><span>Shop</span></div>' +
+              '<div>Redeemed ' + escapeHtml(h.item||"item") + '</div>' +
+              '<div class="h-spend">-' + fmtMoney(h.cost||0) + ' credit</div>';
+          } else {
+            var itemStr = (h.items||[]).map(function(it){ return it.weight.toFixed(1) + "kg " + MATERIALS[it.material].label; }).join(", ");
+            div.innerHTML = '<div class="h-top"><span>' + dateStr + '</span><span>' + fmtMoney(h.cash||0) + '</span></div>' +
+              '<div>' + escapeHtml(itemStr) + '</div>' +
+              '<div class="h-gain">+' + (h.points||0) + ' pts</div>';
+          }
+          els.historyList.appendChild(div);
+        });
+      }
+    }
+
+    // ---------- Ticket ----------
+    function renderTicket(){
+      if(state.ticket.length === 0){
+        els.ticket.innerHTML = '<div class="ticket-empty">No items yet — weigh a material and add it to the ticket.</div>';
+        els.ticketTotals.style.display = "none";
+        els.completeBtn.disabled = true;
+        return;
+      }
+      els.ticket.innerHTML = "";
+      state.ticket.forEach(function(line, idx){
+        var row = document.createElement("div");
+        row.className = "ticket-row";
+        row.innerHTML = '<span class="dot" style="background:' + MATERIALS[line.material].color + '"></span>' +
+          '<span>' + MATERIALS[line.material].label + '</span>' +
+          '<span class="w">' + line.weight.toFixed(1) + ' kg</span>' +
+          '<span class="pts">+' + line.points + ' pts</span>' +
+          '<button class="rm" data-idx="' + idx + '" type="button">×</button>';
+        els.ticket.appendChild(row);
+      });
+      els.ticket.querySelectorAll(".rm").forEach(function(btn){
+        btn.addEventListener("click", function(){ state.ticket.splice(+btn.dataset.idx, 1); renderTicket(); });
+      });
+      var tw = state.ticket.reduce(function(s,l){ return s+l.weight; }, 0);
+      var tp = state.ticket.reduce(function(s,l){ return s+l.points; }, 0);
+      var tc = state.ticket.reduce(function(s,l){ return s+l.cash; }, 0);
+      els.totalWeight.textContent = tw.toFixed(1) + " kg";
+      els.totalPoints.textContent = tp;
+      els.totalCash.textContent = fmtMoney(tc);
+      els.ticketTotals.style.display = "flex";
+      els.completeBtn.disabled = !state.selectedId;
+    }
+
+    els.weightSlider.addEventListener("input", function(){ setWeight(els.weightSlider.value); });
+    document.querySelectorAll(".quick-add button").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var add = btn.dataset.add;
+        if(add === "reset"){ setWeight(0); } else { setWeight(state.weight + parseFloat(add)); }
+      });
+    });
+    els.addLineBtn.addEventListener("click", function(){
+      if(!state.material || state.weight <= 0 || !state.selectedId) return;
+      var m = MATERIALS[state.material];
+      state.ticket.push({ material: state.material, weight: state.weight,
+        points: Math.round(state.weight*m.points), cash: +(state.weight*m.cash).toFixed(2) });
+      renderTicket();
+      var added = state.ticket[state.ticket.length-1];
+      setWeight(0); state.material = null; renderMaterialGrid(); updateScaleSub(); updateAddLineState();
+      showToast("Added " + added.weight.toFixed(1) + " kg to ticket");
+    });
+
+    els.completeBtn.addEventListener("click", function(){
+      var c = getSelected();
+      if(!c || state.ticket.length === 0) return;
+      var tp = 0, tc = 0;
+      var totalsUpdate = {};
+      state.ticket.forEach(function(line){
+        tp += line.points; tc += line.cash;
+        totalsUpdate[line.material] = (totalsUpdate[line.material] || 0) + line.weight;
+      });
+      var update = { points: increment(tp), cashback: increment(+tc.toFixed(2)) };
+      Object.keys(totalsUpdate).forEach(function(m){ update["totals." + m] = increment(totalsUpdate[m]); });
+      update.history = arrayUnion({
+        date: new Date().toISOString(),
+        items: state.ticket.map(function(l){ return { material:l.material, weight:l.weight }; }),
+        points: tp, cash: +tc.toFixed(2)
+      });
+      updateDoc(doc(db, "customers", c.id), update).then(function(){
+        showToast("Issued " + tp + " pts + " + fmtMoney(tc) + " cashback to " + (c.name||"member"));
+        state.ticket = []; renderTicket();
+      }).catch(function(err){
+        showToast("Couldn't save that transaction — try again.");
+      });
+    });
+
+    els.searchInput.addEventListener("input", renderCustList);
+    document.getElementById("themeToggle").addEventListener("click", function(){
+      var root = document.documentElement;
+      var cur = root.getAttribute("data-theme");
+      if(cur === "dark"){ root.setAttribute("data-theme","light"); this.textContent = "Dark mode"; }
+      else { root.setAttribute("data-theme","dark"); this.textContent = "Light mode"; }
+    });
+
+    // ---------- Shop manager ----------
+    var shopModal = document.getElementById("shopModal");
+    document.getElementById("shopManageBtn").addEventListener("click", function(){ shopModal.style.display = "flex"; });
+    document.getElementById("shopModalClose").addEventListener("click", function(){ shopModal.style.display = "none"; });
+    shopModal.addEventListener("click", function(e){ if(e.target === shopModal) shopModal.style.display = "none"; });
+
+    function renderShopManageList(){
+      var wrap = document.getElementById("shopManageList");
+      wrap.innerHTML = "";
+      if(state.shopItems.length === 0){
+        wrap.innerHTML = '<div class="empty-note" style="padding:14px;">No shop items yet — add the first one above.</div>';
+        return;
+      }
+      state.shopItems.forEach(function(item){
+        var row = document.createElement("div");
+        row.className = "shop-manage-row";
+        row.innerHTML = '<span>' + (item.emoji || "🎁") + '</span>' +
+          '<span>' + escapeHtml(item.name||"Item") + '<br><span style="color:var(--ink-soft); font-size:11px;">' +
+          fmtMoney(item.costCredit||0) + ' · ' + (item.stock||0) + ' in stock</span></span>' +
+          '<span></span>' +
+          '<button class="rm" type="button" title="Remove">×</button>';
+        row.querySelector(".rm").addEventListener("click", function(){
+          deleteDoc(doc(db, "shopItems", item.id)).catch(function(){ showToast("Couldn't remove that item."); });
+        });
+        wrap.appendChild(row);
+      });
+    }
+
+    document.getElementById("itemAddBtn").addEventListener("click", function(){
+      var name = document.getElementById("itemName").value.trim();
+      var emoji = document.getElementById("itemEmoji").value.trim() || "🎁";
+      var cost = parseFloat(document.getElementById("itemCost").value);
+      var stock = parseInt(document.getElementById("itemStock").value, 10);
+      var errEl = document.getElementById("shopFormError");
+      errEl.textContent = "";
+      if(!name){ errEl.textContent = "Give the item a name."; return; }
+      if(isNaN(cost) || cost < 0){ errEl.textContent = "Enter a valid store-credit cost."; return; }
+      if(isNaN(stock) || stock < 0){ errEl.textContent = "Enter a valid stock count."; return; }
+      var newDoc = doc(collection(db, "shopItems"));
+      setDoc(newDoc, { name: name, emoji: emoji, costCredit: +cost.toFixed(2), stock: stock }).then(function(){
+        document.getElementById("itemName").value = "";
+        document.getElementById("itemEmoji").value = "";
+        document.getElementById("itemCost").value = "";
+        document.getElementById("itemStock").value = "";
+        showToast("Added " + name + " to the shop");
+      }).catch(function(){ errEl.textContent = "Couldn't save that item — try again."; });
+    });
+
+    function tickClock(){
+      document.getElementById("clock").textContent = new Date().toLocaleString(undefined, { weekday:"short", hour:"2-digit", minute:"2-digit" });
+    }
+    setInterval(tickClock, 30000);
+    tickClock();
+
+    renderMaterialGrid();
+    renderTicket();
+    updateScaleSub();
+    updateAddLineState();
+  }
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDHYljhaFnrvRmgl6-nwYrQm-oJvohKtCI",
+    authDomain: "scienceexhibitionnpsisparksg.firebaseapp.com",
+    projectId: "scienceexhibitionnpsisparksg",
+    storageBucket: "scienceexhibitionnpsisparksg.firebasestorage.app",
+    messagingSenderId: "125553329611",
+    appId: "1:125553329611:web:cee5db6dfded852848a24e",
+    measurementId: "G-YHTFQLH4F1"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+</body>
+</html>
